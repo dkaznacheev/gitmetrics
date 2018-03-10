@@ -8,7 +8,7 @@
 </head>
 
 <body>
-<h3 id="-">Github repo title</h3>
+<h3 id="-">%REPONAME%</h3>
 <canvas id="myChart" width="800" height="400"></canvas>
 </body>
 
@@ -19,10 +19,10 @@ var ctx = document.getElementById("myChart")
 var myChart = new Chart(ctx, {
     type: 'line',
     data: {
-        labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
+        labels: %LABELS%,
         datasets: [{
-            label: '# LOC',
-            data: [12, 19, 3, 5, 2, 3],
+            label: 'Lines of code',
+            data: %DATA%,
             fill: "false",
             borderColor: "rgb(75, 192, 192)",
             lineTension: 0.1

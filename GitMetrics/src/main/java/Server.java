@@ -3,27 +3,25 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 import java.awt.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Server {
-    public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-        server.createContext("/", new MyHandler());
-        server.setExecutor(null); // creates a default executor
-        server.start();
+    private String repoName;
 
-        if (Desktop.isDesktopSupported()) {
-            Desktop.getDesktop().browse(new URI("http://localhost:8000"));
-        }
+    private List<Integer> lines;
+
+    public Server(String repoName, List<Integer> lines) {
+        this.repoName = repoName;
+        this.lines = lines;
     }
 
     static String readFile(String path, Charset encoding) throws IOException  {
@@ -35,22 +33,43 @@ public class Server {
         }
     }
 
-    static class MyHandler implements HttpHandler {
+    public void start() throws IOException, URISyntaxException {
+        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+        server.createContext("/", new MyHandler());
+        server.setExecutor(null);
+        server.start();
+
+        if (Desktop.isDesktopSupported()) {
+            Desktop.getDesktop().browse(new URI("http://localhost:8000"));
+        }
+    }
+
+    private class MyHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
             t.sendResponseHeaders(200, 0);
 
             String path = t.getRequestURI().getPath();
 
+            InputStream fs;
             if (path.equals("/")) {
                 path = "chart.html";
                 String html = readFile(path, Charset.defaultCharset());
-                System.out.println(html);
+
+                html = html.replace("%REPONAME%", repoName);
+                List<Integer> labels = IntStream.range(1, lines.size() + 1).boxed().collect(Collectors.toList());
+                html = html.replace("%LABELS%", intListToString(labels));
+                html = html.replace("%DATA%", intListToString(lines));
+
+                ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
+                byteBuffer.write(html.getBytes());
+                fs = new ByteArrayInputStream(byteBuffer.toByteArray());
+            } else {
+                File htmlPage = new File(getClass().getResource(path).getFile());
+                fs = new FileInputStream(htmlPage);
             }
 
             OutputStream os = t.getResponseBody();
-            File htmlPage = new File(getClass().getResource(path).getFile());
-            FileInputStream fs = new FileInputStream(htmlPage);
             final byte[] buffer = new byte[0x10000];
             int count;
             while ((count = fs.read(buffer)) >= 0) {
@@ -60,5 +79,12 @@ public class Server {
 
             os.close();
         }
+    }
+
+    private static String intListToString(List<Integer> labels) {
+        StringWriter writer = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(writer);
+        printWriter.print(labels);
+        return writer.toString();
     }
 }
