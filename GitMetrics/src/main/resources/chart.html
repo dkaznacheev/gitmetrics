@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chart</title>
+    <link rel="stylesheet" href="modest.css">
+</head>
+
+<body>
+<h3 id="-">Github repo title</h3>
+<canvas id="myChart" width="800" height="400"></canvas>
+</body>
+
+<script src="Chart.js"></script>
+
+<script>
+var ctx = document.getElementById("myChart")
+var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
+        datasets: [{
+            label: '# LOC',
+            data: [12, 19, 3, 5, 2, 3],
+            fill: "false",
+            borderColor: "rgb(75, 192, 192)",
+            lineTension: 0.1
+        }]
+    }
+});
+</script>
+</html>
