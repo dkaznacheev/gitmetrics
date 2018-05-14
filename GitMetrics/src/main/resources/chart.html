@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chart</title>
+    <link rel="stylesheet" href="modest.css">
+</head>
+
+<body>
+<h3 id="-">%REPONAME%</h3>
+<div class="tab">
+    <button class="tablinks" onclick="selectChart(event, 'LOC')" id="defButton">LOC</button>
+    <button class="tablinks" onclick="selectChart(event, 'diffs')">Diffs</button>
+</div>
+<div id="chartContainer" style="height: 300px; width: 100%;"></div>
+<!--<canvas id="myChart" width="800" height="400"></canvas>-->
+
+</body>
+
+<script src="canvasjs.min.js"></script>
+
+<script>
+function selectChart(evt, chartName) {
+    var datasets = [
+    [{
+        data: %DATA1%,
+        borderColor: "rgb(75, 192, 192)",
+        label: "Lines of code",
+        fill: false,
+        lineTension: 0.1
+    }],
+
+    [{
+        data: %DATA2%,
+        backgroundColor: "rgb(192, 75, 75)",
+        label: "Lines added",
+        fill: true,
+        lineTension: 0.1,
+        pointRadius: 1
+    },
+    {
+        data: %DATA3%,
+        backgroundColor: "rgb(75, 75, 192)",
+        label: "Lines deleted",
+        fill: true,
+        lineTension: 0.1,
+        pointRadius: 1
+    },]
+    ]
+
+    var ctx = document.getElementById("myChart")
+    var i
+    if (chartName == 'LOC') {
+        i = 0
+    } else {
+        i = 1
+    }
+
+    var myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: %LABELS%,
+            datasets: datasets[i]
+        },
+        options: {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero:true
+                    }
+                }]
+            },
+            pan: {
+                enabled: true,
+                mode: 'x',
+                speed:50,
+            },
+
+            zoom: {
+                enabled: true,
+                mode: 'x',
+                limits: {
+                    max: 10,
+                    min: 0.5
+                }
+            }
+        }
+    });
+}
+window.onload = function () {
+    var chart = new CanvasJS.Chart("chartContainer",
+    {
+      title: {
+        text: "Monthly Downloads"
+      },
+        data: [
+      {
+        type: "area",
+        dataPoints: [//array
+
+        { x: new Date(2012, 00, 1), y: 2600 },
+        { x: new Date(2012, 01, 1), y: 3800 },
+        { x: new Date(2012, 02, 1), y: 4300 },
+        { x: new Date(2012, 03, 1), y: 2900 },
+        { x: new Date(2012, 04, 1), y: 4100 },
+        { x: new Date(2012, 05, 1), y: 4500 },
+        { x: new Date(2012, 06, 1), y: 8600 },
+        { x: new Date(2012, 07, 1), y: 6400 },
+        { x: new Date(2012, 08, 1), y: 5300 },
+        { x: new Date(2012, 09, 1), y: 6000 }
+        ]
+      }
+      ]
+    });
+
+    chart.render();
+  }
+
+document.getElementById("defButton").click();
+
+</script>
+</html>

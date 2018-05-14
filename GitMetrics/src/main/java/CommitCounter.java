@@ -1,4 +1,3 @@
-import javafx.util.Pair;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
@@ -25,6 +24,8 @@ import java.util.List;
  */
 public class CommitCounter {
 
+    private String repoName;
+
     /**
      * The repository we're working in.
      */
@@ -40,6 +41,7 @@ public class CommitCounter {
      * @param pathname path to repository
      */
     public CommitCounter(String pathname) throws IOException {
+        repoName = pathname;
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         repository = builder.setGitDir(new File(pathname))
                 .readEnvironment()
@@ -118,5 +120,9 @@ public class CommitCounter {
         }
 
         return list;
+    }
+
+    public String getRepositoryName() {
+        return repoName;
     }
 }
