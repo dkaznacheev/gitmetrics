@@ -10,6 +10,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -18,10 +19,12 @@ public class Server {
     private String repoName;
 
     private List<Integer> lines;
+    private List<Pair<Integer, Integer>> diffs;
 
-    public Server(String repoName, List<Integer> lines) {
+    public Server(String repoName, List<Integer> lines, List<Pair<Integer, Integer>> diffs) {
         this.repoName = repoName;
         this.lines = lines;
+        this.diffs = diffs;
     }
 
     static String readFile(String path, Charset encoding) throws IOException  {
@@ -59,8 +62,9 @@ public class Server {
                 html = html.replace("%REPONAME%", repoName);
                 List<Integer> labels = IntStream.range(1, lines.size() + 1).boxed().collect(Collectors.toList());
                 html = html.replace("%LABELS%", intListToString(labels));
-                html = html.replace("%DATA%", intListToString(lines));
-
+                html = html.replace("%DATA1%", intListToString(lines));
+                html = html.replace("%DATA2%", intListToString(firsts(diffs)));
+                html = html.replace("%DATA3%", intListToString(seconds(diffs)));
                 ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
                 byteBuffer.write(html.getBytes());
                 fs = new ByteArrayInputStream(byteBuffer.toByteArray());
@@ -86,5 +90,21 @@ public class Server {
         PrintWriter printWriter = new PrintWriter(writer);
         printWriter.print(labels);
         return writer.toString();
+    }
+
+    private static List<Integer> firsts(List<Pair<Integer, Integer>> list) {
+        List<Integer> result = new LinkedList<>();
+        for (Pair<Integer, Integer> pair: list) {
+            result.add(pair.getKey());
+        }
+        return result;
+    }
+
+    private static List<Integer> seconds(List<Pair<Integer, Integer>> list) {
+        List<Integer> result = new LinkedList<>();
+        for (Pair<Integer, Integer> pair: list) {
+            result.add(-pair.getValue());
+        }
+        return result;
     }
 }

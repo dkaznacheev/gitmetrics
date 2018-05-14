@@ -13,12 +13,12 @@
     <button class="tablinks" onclick="selectChart(event, 'LOC')" id="defButton">LOC</button>
     <button class="tablinks" onclick="selectChart(event, 'diffs')">Diffs</button>
 </div>
-<div id="chartContainer" style="height: 300px; width: 100%;"></div>
-<!--<canvas id="myChart" width="800" height="400"></canvas>-->
-
+<canvas id="myChart" width="800" height="400"></canvas>
 </body>
 
-<script src="canvasjs.min.js"></script>
+<script src="Chart.js"></script>
+<script src="chartjs-plugin-zoom.js"></script>
+<script src="hammer.min.js"></script>
 
 <script>
 function selectChart(evt, chartName) {
@@ -88,34 +88,6 @@ function selectChart(evt, chartName) {
         }
     });
 }
-window.onload = function () {
-    var chart = new CanvasJS.Chart("chartContainer",
-    {
-      title: {
-        text: "Monthly Downloads"
-      },
-        data: [
-      {
-        type: "area",
-        dataPoints: [//array
-
-        { x: new Date(2012, 00, 1), y: 2600 },
-        { x: new Date(2012, 01, 1), y: 3800 },
-        { x: new Date(2012, 02, 1), y: 4300 },
-        { x: new Date(2012, 03, 1), y: 2900 },
-        { x: new Date(2012, 04, 1), y: 4100 },
-        { x: new Date(2012, 05, 1), y: 4500 },
-        { x: new Date(2012, 06, 1), y: 8600 },
-        { x: new Date(2012, 07, 1), y: 6400 },
-        { x: new Date(2012, 08, 1), y: 5300 },
-        { x: new Date(2012, 09, 1), y: 6000 }
-        ]
-      }
-      ]
-    });
-
-    chart.render();
-  }
 
 document.getElementById("defButton").click();
 

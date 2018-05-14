@@ -1,4 +1,3 @@
-import javafx.util.Pair;
 import org.apache.commons.cli.*;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -8,7 +7,10 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class Main {
@@ -66,13 +68,13 @@ public class Main {
             }
 
             List<Integer> lines = Commits.countLinesByDiff(commits);
-
+            List<Pair<Integer, Integer>> diffs = countDiffs(commits);
             if (commandLine.hasOption("g")) {
                 Plotter.makePlot(lines);
             }
 
             if (commandLine.hasOption("w")) {
-                Server localHTTPServer = new Server(commitCounter.getRepositoryName(), lines);
+                Server localHTTPServer = new Server(commitCounter.getRepositoryName(), lines, diffs);
                 localHTTPServer.start();
             }
         } catch (IOException e) {
@@ -84,5 +86,13 @@ public class Main {
         } catch (URISyntaxException e) {
             System.err.println("Server error!");
         }
+    }
+
+    private static List<Pair<Integer,Integer>> countDiffs(List<CommitInfo> commits) {
+        List<Pair<Integer,Integer>> result = new LinkedList<>();
+        for (CommitInfo commitInfo : commits) {
+            result.add(new Pair<>(commitInfo.getLinesAdded(), commitInfo.getLinesDeleted()));
+        }
+        return result;
     }
 }
