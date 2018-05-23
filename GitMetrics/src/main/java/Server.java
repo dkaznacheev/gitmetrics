@@ -10,7 +10,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -18,14 +18,92 @@ import java.util.stream.IntStream;
 public class Server {
     private String repoName;
 
-    private List<Integer> lines;
-    private List<Pair<Integer, Integer>> diffs;
+    private List<CommitMetricInfo> commitInfos;
+    private List<CommitMetricInfo> commitInfoDiffs;
 
-    public Server(String repoName, List<Integer> lines, List<Pair<Integer, Integer>> diffs) {
+    private Map<String, List<CommitMetricInfo>> commitDiffsByUser;
+    private Map<String, List<String>> aliases;
+
+    public Server(String repoName, List<CommitMetricInfo> commitInfos) {
         this.repoName = repoName;
-        this.lines = lines;
-        this.diffs = diffs;
+        this.commitInfos = commitInfos;
+
+        commitInfoDiffs = createDiffs();
+        commitDiffsByUser = commitInfoDiffs.stream().collect(Collectors.groupingBy((info) -> info.committerName));
+        aliases = commitDiffsByUser
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e->e.getValue()
+                                .stream()
+                                .map((info) -> info.committerEmail).distinct().collect(Collectors.toList())
+                ));
     }
+
+    private List<CommitMetricInfo> createDiffs() {
+        Map<String, Double> previous = commitInfos.get(0).metrics;
+        for (Map.Entry<String, Double> metric : previous.entrySet()) {
+            previous.put(metric.getKey(), 0.0);
+        }
+        List<CommitMetricInfo> result = new LinkedList<>();
+        for (CommitMetricInfo info : commitInfos) {
+            Map<String, Double> diffs = new HashMap<>();
+            for (Map.Entry<String, Double> metric : info.metrics.entrySet()) {
+                diffs.put(metric.getKey(), metric.getValue() - previous.get(metric.getKey()));
+            }
+            previous = info.metrics;
+            result.add(new CommitMetricInfo(
+                    diffs,
+                    info.committerName,
+                    info.committerEmail,
+                    info.commitMessage,
+                    info.commitNumber
+            ));
+        }
+        return result;
+    }
+
+    private String assembleData() {
+        StringJoiner joiner = new StringJoiner(",\n");
+        for (String metric : getMetricsNames()) {
+            joiner.add("\"" + getAbbreviation(metric) + "\" : {" + makeUserDictForMetric(metric) + "}");
+        }
+        return joiner.toString();
+    }
+
+    private String getAbbreviation(String metric) {
+        if (metric.equals("Lines of code"))
+            return "LOC";
+        return "LOCt";
+    }
+
+    private String makeUserDictForMetric(String metric) {
+        StringJoiner joiner = new StringJoiner(",\n");
+        joiner.add("\"total\" :[" + makeDatasetForMetric(commitInfos, metric) + "]");
+        commitDiffsByUser.entrySet().forEach(e ->
+                joiner.add("\"" + e.getKey() + "\" "+ ": [" + makeDatasetForMetric(e.getValue(), metric) + "]"));
+        return joiner.toString();
+    }
+
+    private String makeDatasetForMetric(List<CommitMetricInfo> values, String metric) {
+        StringJoiner joiner = new StringJoiner(",\n");
+        values.forEach(e->joiner.add(
+                "{x : "
+                + e.commitNumber
+                + ", y: "
+                + e.metrics.get(metric)
+                + ", message: "
+                + "\"" + e.commitMessage + "\"}"
+        ));
+        return joiner.toString();
+    }
+
+    private List<String> getMetricsNames() {
+        CommitMetricInfo info = commitInfos.get(0);
+        return info.metrics.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toList());
+    }
+
 
     static String readFile(String path, Charset encoding) throws IOException  {
         try {
@@ -59,14 +137,24 @@ public class Server {
                 path = "chart.html";
                 String html = readFile(path, Charset.defaultCharset());
 
-                html = html.replace("%REPONAME%", repoName);
-                List<Integer> labels = IntStream.range(1, lines.size() + 1).boxed().collect(Collectors.toList());
-                html = html.replace("%LABELS%", intListToString(labels));
-                html = html.replace("%DATA1%", intListToString(lines));
-                html = html.replace("%DATA2%", intListToString(firsts(diffs)));
-                html = html.replace("%DATA3%", intListToString(seconds(diffs)));
+                html = html
+                    .replace("%REPONAME%", repoName)
+                    .replace("%TABS%", makeTabs())
+                    .replace("%BUTTONS%", makeButtons());
+
                 ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
                 byteBuffer.write(html.getBytes());
+                fs = new ByteArrayInputStream(byteBuffer.toByteArray());
+            } else if (path.equals("/script.js")) {
+                String js = readFile("script.js", Charset.defaultCharset());
+                js = js
+                        .replace("%DATASET%", assembleData())
+                        .replace("%CHARTS%", makeCharts())
+                        .replace("%NAMETABLE%", makeNameTable())
+                        .replace("%METRICNAME%", getAbbreviation(getMetricsNames().get(0)));
+
+                ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
+                byteBuffer.write(js.getBytes());
                 fs = new ByteArrayInputStream(byteBuffer.toByteArray());
             } else {
                 File htmlPage = new File(getClass().getResource(path).getFile());
@@ -85,26 +173,61 @@ public class Server {
         }
     }
 
-    private static String intListToString(List<Integer> labels) {
-        StringWriter writer = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(writer);
-        printWriter.print(labels);
-        return writer.toString();
+    private String makeNameTable() {
+        StringJoiner joiner = new StringJoiner(",\n");
+        int id = 1;
+        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
+            joiner.add("\"button" + Integer.toString(id) + "\": \"" + entry.getKey() + "\"");
+            id++;
+        }
+        return joiner.toString();
     }
 
-    private static List<Integer> firsts(List<Pair<Integer, Integer>> list) {
-        List<Integer> result = new LinkedList<>();
-        for (Pair<Integer, Integer> pair: list) {
-            result.add(pair.getKey());
+    private String makeCharts() {
+        final String pattern = "{\n" +
+                "type: \"line\",\n" +
+                "name: \"%NAME%\",\n" +
+                "visible: %VIS%,\n" +
+                "dataPoints: dataset[\"%METRIC%\"][\"%NAME%\"]\n" +
+                "}";
+        StringJoiner joiner = new StringJoiner(",\n");
+        String firstMetricName = getAbbreviation(getMetricsNames().get(0));
+        joiner.add(pattern
+                .replaceAll("%NAME%", "total")
+                .replace("%VIS%", "true")
+                .replace("%METRIC%", firstMetricName)
+        );
+        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
+            joiner.add(pattern
+                    .replaceAll("%NAME%", entry.getKey())
+                    .replace("%VIS%", "false")
+                    .replace("%METRIC%", firstMetricName)
+            );
         }
-        return result;
+        return joiner.toString();
     }
 
-    private static List<Integer> seconds(List<Pair<Integer, Integer>> list) {
-        List<Integer> result = new LinkedList<>();
-        for (Pair<Integer, Integer> pair: list) {
-            result.add(-pair.getValue());
+    private String makeButtons() {
+        final String pattern = "<button id=\"%ID%\" value=\"Off\" class=\"tablinks\" onclick=\"onCommitterClick('%ID%')\" onmouseover=\"mouseOver('%ID%')\" onmouseout=\"mouseOut('%ID%')\"> %NAME% </button>";
+        StringJoiner joiner = new StringJoiner("\n");
+        int id = 1;
+        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
+            joiner.add(pattern
+                    .replaceAll("%ID%", "button" + Integer.toString(id))
+                    .replaceAll("%NAME%", entry.getKey())
+            );
+            id++;
         }
-        return result;
+        return joiner.toString();
     }
+
+    private String makeTabs() {
+        StringJoiner joiner = new StringJoiner("\n");
+        for (String metric : getMetricsNames()) {
+            joiner.add("<button class=\"tablinks\" onclick=\"selectChart(event, '"
+                    + getAbbreviation(metric) + "', '" + metric + "')\">" + metric + "</button>");
+        }
+        return joiner.toString();
+    }
+
 }
