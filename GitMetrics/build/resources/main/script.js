@@ -55,7 +55,7 @@ window.onload = function () {
         %CHARTS%
     ],
     title: {
-        text: "Lines of code"
+        text: %METRICNAME%
     }
     });
 

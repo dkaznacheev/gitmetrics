@@ -1,3 +1,4 @@
+import com.sun.xml.internal.ws.api.ha.StickyFeature;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
@@ -15,9 +16,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.File;
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class CommitMetricCounter {
@@ -26,14 +26,14 @@ public class CommitMetricCounter {
     private final String pathname;
     private final Git git;
 
-    private static final String IDEA_PATH =
-            "/home/dk/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0/181.4203.550/bin/idea.sh";
+    private String ideaPath;
 
-    private CommitMetricCounter(Repository repository, RevWalk walk, String pathname, Git git){
+    private CommitMetricCounter(Repository repository, RevWalk walk, String pathname, Git git, String ideaPath){
         this.repository = repository;
         this.walk = walk;
         this.pathname = pathname;
         this.git = git;
+        this.ideaPath = ideaPath;
     }
 
     public static CommitMetricCounter openCommitMetricCounter(String pathname, String relativeProjectPath) {
@@ -53,7 +53,29 @@ public class CommitMetricCounter {
             RevWalk walk = new RevWalk(repository);
             walk.markStart(walk.parseCommit(repository.resolve("HEAD")));
 
-            return new CommitMetricCounter(repository, walk, pathname + File.separator + relativeProjectPath, git);
+            String ideaPath = getIdeaPath();
+            if (ideaPath == null) {
+                System.err.println("No idea path found, check resources/ideapath.conf");
+                return null;
+            }
+
+            return new CommitMetricCounter(repository, walk,
+                    pathname + File.separator + relativeProjectPath, git,
+                    ideaPath);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private static String getIdeaPath() {
+        ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+        try (
+            InputStream is = classloader.getResourceAsStream("ideapath.conf");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is))
+        ) {
+            String res = reader.readLine();
+            System.out.println(res);
+            return res;
         } catch (IOException e) {
             return null;
         }
@@ -103,7 +125,7 @@ public class CommitMetricCounter {
 
     public Map<String, Double> countMetrics(String metricProfileName) {
         try {
-            String xml = Util.executeCommand(IDEA_PATH, "metrics", normalize(pathname), metricProfileName);
+            String xml = Util.executeCommand(ideaPath, "metrics", normalize(pathname), metricProfileName);
             return parseXML(cleanOutput(xml));
         } catch (InterruptedException | IOException e) {
             return null;

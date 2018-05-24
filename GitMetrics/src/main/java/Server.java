@@ -141,7 +141,7 @@ public class Server {
                     .replace("%REPONAME%", repoName)
                     .replace("%TABS%", makeTabs())
                     .replace("%BUTTONS%", makeButtons());
-
+                System.out.println(html);
                 ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
                 byteBuffer.write(html.getBytes());
                 fs = new ByteArrayInputStream(byteBuffer.toByteArray());
@@ -151,8 +151,8 @@ public class Server {
                         .replace("%DATASET%", assembleData())
                         .replace("%CHARTS%", makeCharts())
                         .replace("%NAMETABLE%", makeNameTable())
-                        .replace("%METRICNAME%", getAbbreviation(getMetricsNames().get(0)));
-
+                        .replace("%METRICNAME%", "\"" + getMetricsNames().get(0) + "\"");
+                System.out.println(js);
                 ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
                 byteBuffer.write(js.getBytes());
                 fs = new ByteArrayInputStream(byteBuffer.toByteArray());
