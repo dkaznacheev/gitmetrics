@@ -1,4 +1,3 @@
-import com.sun.xml.internal.ws.api.ha.StickyFeature;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
@@ -120,12 +119,14 @@ public class CommitMetricCounter {
         Map<String, Double> metricResults = new HashMap<>();
         metricResults.put("Lines of code", random.nextDouble() * 100);
         metricResults.put("Lines of test code", random.nextDouble() * 100);
+        metricResults.put("Comment lines of code", random.nextDouble() * 100);
+        metricResults.put("Average cyclomatic complexity", random.nextDouble());
         return metricResults;
     }
 
     public Map<String, Double> countMetrics(String metricProfileName) {
         try {
-            String xml = Util.executeCommand(ideaPath, "metrics", normalize(pathname), metricProfileName);
+            String xml = Util.executeCommand(ideaPath, "metrics", normalize(pathname), "customprofile");
             return parseXML(cleanOutput(xml));
         } catch (InterruptedException | IOException e) {
             return null;
@@ -150,8 +151,12 @@ public class CommitMetricCounter {
             Map<String, Double> metricResults = new HashMap<>();
             Double linesOfCode =  getValueFromXML(doc, "LOC");
             Double linesOfTestCode = getValueFromXML(doc, "LOCt");
+            Double linesOfComments = getValueFromXML(doc, "CLOC");
+            Double avgCyclomaticComplexity = getValueFromXML(doc, "v(G)avg");
             metricResults.put("Lines of code", linesOfCode);
             metricResults.put("Lines of test code", linesOfTestCode);
+            metricResults.put("Comment lines of code", linesOfComments);
+            metricResults.put("Average cyclomatic complexity", avgCyclomaticComplexity);
 
             return metricResults;
         } catch (Exception e) {

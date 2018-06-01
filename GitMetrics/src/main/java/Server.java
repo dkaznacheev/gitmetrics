@@ -22,7 +22,7 @@ public class Server {
     private List<CommitMetricInfo> commitInfoDiffs;
 
     private Map<String, List<CommitMetricInfo>> commitDiffsByUser;
-    private Map<String, List<String>> aliases;
+    private Map<String, Set<String>> aliases;
 
     public Server(String repoName, List<CommitMetricInfo> commitInfos) {
         this.repoName = repoName;
@@ -30,15 +30,31 @@ public class Server {
 
         commitInfoDiffs = createDiffs();
         commitDiffsByUser = commitInfoDiffs.stream().collect(Collectors.groupingBy((info) -> info.committerName));
-        aliases = commitDiffsByUser
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e->e.getValue()
-                                .stream()
-                                .map((info) -> info.committerEmail).distinct().collect(Collectors.toList())
-                ));
+        makeAliases(commitInfos);
+    }
+
+    private void makeAliases(List<CommitMetricInfo> commitInfos) {
+        aliases = new HashMap<>();
+        for (CommitMetricInfo info : commitInfos) {
+            String name = info.committerName;
+            String email = info.committerEmail;
+            if (aliases.get(name) == null) {
+                boolean hasName = false;
+                for (Map.Entry<String, Set<String>> entry : aliases.entrySet()) {
+                    if (entry.getValue().contains(name) || entry.getValue().contains(email)) {
+                        entry.getValue().add(name);
+                        entry.getValue().add(email);
+                        hasName = true;
+                        break;
+                    }
+                }
+                if (!hasName) {
+                    aliases.put(name, new HashSet<>(Arrays.asList(email)));
+                }
+            } else {
+                aliases.get(name).add(email);
+            }
+        }
     }
 
     private List<CommitMetricInfo> createDiffs() {
@@ -75,7 +91,14 @@ public class Server {
     private String getAbbreviation(String metric) {
         if (metric.equals("Lines of code"))
             return "LOC";
-        return "LOCt";
+        if (metric.equals("Lines of test code"))
+            return "LOCt";
+        if (metric.equals("Comment lines of code"))
+            return "CLOC";
+        if (metric.equals("Average cyclomatic complexity"))
+            return "v(G)avg";
+        return metric;
+
     }
 
     private String makeUserDictForMetric(String metric) {
@@ -151,7 +174,9 @@ public class Server {
                         .replace("%DATASET%", assembleData())
                         .replace("%CHARTS%", makeCharts())
                         .replace("%NAMETABLE%", makeNameTable())
-                        .replace("%METRICNAME%", "\"" + getMetricsNames().get(0) + "\"");
+                        .replace("%METRICNAME%", "\"" + getMetricsNames().get(0) + "\"")
+                        .replace("%SHORTMETRICNAME%", "\"" + getAbbreviation(getMetricsNames().get(0)) + "\"")
+                        .replace("%STATS%", makeStats());
                 System.out.println(js);
                 ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
                 byteBuffer.write(js.getBytes());
@@ -176,7 +201,7 @@ public class Server {
     private String makeNameTable() {
         StringJoiner joiner = new StringJoiner(",\n");
         int id = 1;
-        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
+        for (Map.Entry<String, Set<String>> entry : aliases.entrySet()) {
             joiner.add("\"button" + Integer.toString(id) + "\": \"" + entry.getKey() + "\"");
             id++;
         }
@@ -197,7 +222,7 @@ public class Server {
                 .replace("%VIS%", "true")
                 .replace("%METRIC%", firstMetricName)
         );
-        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
+        for (Map.Entry<String, Set<String>> entry : aliases.entrySet()) {
             joiner.add(pattern
                     .replaceAll("%NAME%", entry.getKey())
                     .replace("%VIS%", "false")
@@ -211,7 +236,7 @@ public class Server {
         final String pattern = "<button id=\"%ID%\" value=\"Off\" class=\"tablinks\" onclick=\"onCommitterClick('%ID%')\" onmouseover=\"mouseOver('%ID%')\" onmouseout=\"mouseOut('%ID%')\"> %NAME% </button>";
         StringJoiner joiner = new StringJoiner("\n");
         int id = 1;
-        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
+        for (Map.Entry<String, Set<String>> entry : aliases.entrySet()) {
             joiner.add(pattern
                     .replaceAll("%ID%", "button" + Integer.toString(id))
                     .replaceAll("%NAME%", entry.getKey())
@@ -230,4 +255,26 @@ public class Server {
         return joiner.toString();
     }
 
+
+    private String makeStats() {
+        StringJoiner joiner = new StringJoiner(",\n");
+        for (String metric : getMetricsNames()) {
+            joiner.add("\"" + getAbbreviation(metric) + "\" : " + makeStatsForMetric(metric));
+        }
+        return joiner.toString();
+    }
+
+    private String makeStatsForMetric(String metric) {
+        StringJoiner joiner = new StringJoiner(",\n");
+        commitDiffsByUser.forEach((name, commitMetricInfos) -> joiner.add(
+                        "[\"" + name
+                        + "\", " + Double.toString(
+                            commitMetricInfos.stream().mapToDouble(info -> info.metrics.get(metric)).average().orElse(0))
+                        + ", " + Double.toString(
+                            commitMetricInfos.stream().mapToDouble(info -> info.metrics.get(metric)).max().orElse(0))
+                        + "]"
+                )
+        );
+        return "[" + joiner.toString() + "]";
+    }
 }

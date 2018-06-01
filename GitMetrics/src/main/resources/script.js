@@ -2,6 +2,10 @@ var names = {
     %NAMETABLE%
 }
 
+var stats = {
+    %STATS%
+}
+
 function mouseOut(id) {
     if (document.getElementById(id).value == "Off") {
         document.getElementById(id).style.backgroundColor='inherit';
@@ -47,6 +51,7 @@ var chart;
 var set;
 
 window.onload = function () {
+    changeTable(%SHORTMETRICNAME%)
     set = new Set();
     chart = new CanvasJS.Chart("chartContainer",
     {
@@ -65,6 +70,7 @@ window.onload = function () {
 
 function selectChart (evt, name, label) {
     currentMetric = name;
+    changeTable(name);
     for (var i = 0; i < chart.options.data.length; i++) {
         chart.options.data[i].dataPoints = dataset[name][chart.options.data[i].name];
     }
@@ -120,4 +126,57 @@ function onCommitterClick(id){
         }
         chart.render();
     }
+}
+
+
+function sortTable(n) {
+  var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+  table = document.getElementById("table");
+  switching = true;
+  dir = "asc";
+  while (switching) {
+    switching = false;
+    rows = table.getElementsByTagName("TR");
+    for (i = 1; i < (rows.length - 1); i++) {
+      shouldSwitch = false;
+      x = rows[i].getElementsByTagName("TD")[n];
+      y = rows[i + 1].getElementsByTagName("TD")[n];
+      if (dir == "asc") {
+        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+          shouldSwitch = true;
+          break;
+        }
+      } else if (dir == "desc") {
+        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+          shouldSwitch = true;
+          break;
+        }
+      }
+    }
+    if (shouldSwitch) {
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+      switchcount ++;
+    } else {
+      if (switchcount == 0 && dir == "asc") {
+        dir = "desc";
+        switching = true;
+      }
+    }
+  }
+}
+
+function changeTable(name) {
+    var oldBody = document.getElementById("tableBody");
+    var tbody = document.createElement('tbody');
+    tbody.setAttribute("id", "tableBody");
+    for (var i = 0; i < stats[name].length; i++) {
+        var row = tbody.insertRow(i);
+        for (var j = 0; j < 3; j++) {
+            var newCell = row.insertCell(j);
+            var text = document.createTextNode(stats[name][i][j]);
+            newCell.appendChild(text);
+        }
+    }
+    oldBody.parentNode.replaceChild(tbody, oldBody);
 }
