@@ -2,7 +2,9 @@
 * Count metrics, print stats by committers in an interactive chart.
 
 ## Before building:
-Change the contents of `GitMetrics/src/resources/ideapath.conf` to absolute path to your IDEA running script.
+* Install MetricsReloaded plugin to your IDEA
+* Set path to your IDEA executing script and config folder in `setup.sh`
+* Run `setup.sh`
 
 ## Build
 `gradle build`
