@@ -1,18 +1,17 @@
 # GitMetrics
-Test task for SPbAU practice: a CLI java application for gathering stats about the Git repository committers.
-It is able to clone the repository, then:
-* Count the lines of code in the repository with each commit and save it as a JPEG chart.
-* Print the stats of committers: their name, number of commits, average number of added and deleted lines of code, and average time of commit.
+* Count metrics, print stats by committers in an interactive chart.
+
+## Before building:
+Change the contents of `GitMetrics/src/resources/ideapath.conf` to absolute path to your IDEA running script.
 
 ## Build
 `gradle build`
 
 ## Usage
-Run like a regular Java CLI program with arguments:
-
-`java Main -[OPTION]`
+`gradle run -Dexec.args="[ARGS]"`, make sure IDEA is closed while the program runs.
 
 Options:
-* `-q` : silent mode, do not write info about the committers
-* `-u [URI]` : the repository URI, local repository if unspecified
-* `-g` : save the chart
+* `-u` : path to git repository (without .git)
+* `-p` : relative path to IDEA project inside the repository
+
+Example: `gradle run -Dexec.args="-u /home/dk/labyrinth -p Labyrinth"`
