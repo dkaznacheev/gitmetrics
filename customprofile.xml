@@ -1,0 +1,6 @@
+<METRICS_PROFILE profile="customprofile" name="customprofile">
+    <METRIC className = "com.sixrr.stockmetrics.projectMetrics.LinesOfCodeProjectMetric" enabled = "true" lowerThreshold = "0.0" lowerThresholdEnabled = "false" upperThreshold = "0.0" upperThresholdEnabled = "false" />
+    <METRIC className = "com.sixrr.stockmetrics.projectMetrics.LinesOfTestCodeProjectMetric" enabled = "true" lowerThreshold = "0.0" lowerThresholdEnabled = "false" upperThreshold = "0.0" upperThresholdEnabled = "false" />
+    <METRIC className = "com.sixrr.stockmetrics.projectMetrics.AverageCyclomaticComplexityProjectMetric" enabled = "true" lowerThreshold = "0.0" lowerThresholdEnabled = "false" upperThreshold = "0.0" upperThresholdEnabled = "false" />
+	<METRIC className = "com.sixrr.stockmetrics.projectMetrics.CommentLinesOfCodeProjectMetric" enabled = "true" lowerThreshold = "0.0" lowerThresholdEnabled = "false" upperThreshold = "0.0" upperThresholdEnabled = "false" />
+</METRICS_PROFILE>
